@@ -1,0 +1,218 @@
+{% extends 'layout.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div id="pageOverlay" class="page-overlay"></div>
+
+<!-- ── GREETING ── -->
+<div class="page-header">
+  <div>
+    <h2>Hello, {{ (session.name or 'Admin').split()[0] }} 👋</h2>
+    <p>Here's what's happening with attendance today — <strong>{{ today }}</strong></p>
+  </div>
+  <a href="{{ url_for('attendance') }}" class="btn-brand">
+    <i class="bi bi-calendar-check"></i> Mark Attendance
+  </a>
+</div>
+
+<!-- ── STAT CARDS ── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6 col-xl-3">
+    <div class="stat-card card-blue">
+      <div class="stat-icon icon-blue"><i class="bi bi-people-fill"></i></div>
+      <div class="stat-value" data-count="{{ total_students }}">0</div>
+      <div class="stat-label">Total Students</div>
+      <span class="stat-badge" style="background:rgba(59,130,246,0.1);color:#2563EB;">
+        <i class="bi bi-building me-1"></i>All Departments
+      </span>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="stat-card card-green">
+      <div class="stat-icon icon-green"><i class="bi bi-check-circle-fill"></i></div>
+      <div class="stat-value" data-count="{{ present_today }}">0</div>
+      <div class="stat-label">Present Today</div>
+      <span class="stat-badge" style="background:rgba(16,185,129,0.1);color:#059669;">
+        <i class="bi bi-arrow-up-short"></i>Today's count
+      </span>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="stat-card card-red">
+      <div class="stat-icon icon-red"><i class="bi bi-x-circle-fill"></i></div>
+      <div class="stat-value" data-count="{{ absent_today }}">0</div>
+      <div class="stat-label">Absent Today</div>
+      <span class="stat-badge" style="background:rgba(239,68,68,0.1);color:#DC2626;">
+        <i class="bi bi-exclamation-circle me-1"></i>Needs attention
+      </span>
+    </div>
+  </div>
+  <div class="col-md-6 col-xl-3">
+    <div class="stat-card card-purple">
+      <div class="stat-icon icon-purple"><i class="bi bi-percent"></i></div>
+      <div class="stat-value" data-count="{{ attendance_pct }}" data-suffix="%">0%</div>
+      <div class="stat-label">Attendance Rate</div>
+      <span class="stat-badge" style="background:rgba(79,70,229,0.1);color:#4F46E5;">
+        {% if attendance_pct >= 75 %}
+          <i class="bi bi-check2-circle me-1"></i>Good standing
+        {% else %}
+          <i class="bi bi-exclamation-triangle me-1"></i>Below target
+        {% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- ── CHARTS ROW ── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="app-card h-100">
+      <div class="app-card-header">
+        <span class="app-card-title">
+          <i class="bi bi-graph-up text-brand"></i>
+          7-Day Attendance Trend
+        </span>
+        <span style="font-size:11px;color:var(--text-light);">Last 7 days</span>
+      </div>
+      <div class="app-card-body">
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="app-card h-100">
+      <div class="app-card-header">
+        <span class="app-card-title">
+          <i class="bi bi-pie-chart-fill text-brand"></i>
+          By Department
+        </span>
+      </div>
+      <div class="app-card-body">
+        <div class="chart-wrap" style="height:180px;"><canvas id="deptChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── BOTTOM ROW ── -->
+<div class="row g-3">
+  <!-- Department breakdown -->
+  <div class="col-lg-5">
+    <div class="app-card h-100">
+      <div class="app-card-header">
+        <span class="app-card-title">
+          <i class="bi bi-buildings text-brand"></i>
+          Department Overview
+        </span>
+      </div>
+      <div class="app-card-body" style="padding-top:12px;">
+        {% for d in dept_data %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span style="font-size:13px;font-weight:600;">{{ d.dept }}</span>
+            <span style="font-size:12px;color:var(--text-muted);">{{ d.total }} students</span>
+          </div>
+          <div class="pct-bar">
+            <div class="pct-track">
+              <div class="pct-fill"
+                data-width="{{ d.pct }}"
+                style="width:0%;background:{% if d.pct >= 75 %}var(--accent-green){% elif d.pct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+              </div>
+            </div>
+            <span class="pct-label" style="color:{% if d.pct >= 75 %}var(--accent-green){% elif d.pct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+              {{ d.pct }}%
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Low attendance alert -->
+  <div class="col-lg-4">
+    <div class="app-card h-100">
+      <div class="app-card-header">
+        <span class="app-card-title">
+          <i class="bi bi-exclamation-triangle-fill text-amber"></i>
+          Low Attendance
+        </span>
+        <span style="font-size:11px;background:rgba(245,158,11,0.1);color:#D97706;padding:3px 8px;border-radius:99px;font-weight:600;">Alert</span>
+      </div>
+      <div class="app-card-body" style="padding-top:8px;">
+        {% if low_attendance %}
+          {% for s in low_attendance %}
+          {% set pct = (s.p / s.total * 100) | round(1) if s.total else 0 %}
+          <div class="d-flex align-items-center gap-3 py-2" style="border-bottom:1px solid var(--border-subtle);">
+            <div style="width:36px;height:36px;border-radius:50%;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;color:#DC2626;font-weight:700;font-size:13px;flex-shrink:0;">
+              {{ s.name[0] }}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ s.name }}</div>
+              <div style="font-size:11px;color:var(--text-muted);">{{ s.student_id }}</div>
+            </div>
+            <span class="badge-absent">{{ pct }}%</span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state" style="padding:30px 20px;">
+            <div class="empty-icon" style="font-size:36px;">🎉</div>
+            <p>All students have good attendance!</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent activity -->
+  <div class="col-lg-3">
+    <div class="app-card h-100">
+      <div class="app-card-header">
+        <span class="app-card-title">
+          <i class="bi bi-clock-history text-brand"></i>
+          Recent Activity
+        </span>
+      </div>
+      <div class="app-card-body" style="padding-top:8px;">
+        {% if recent %}
+          {% for r in recent %}
+          <div class="d-flex align-items-center gap-2 py-2" style="border-bottom:1px solid var(--border-subtle);">
+            <div class="att-dot {{ r.status }}"></div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ r.name }}</div>
+              <div style="font-size:11px;color:var(--text-muted);">{{ r.date }}</div>
+            </div>
+            <span class="{{ 'badge-present' if r.status == 'present' else 'badge-absent' }}" style="font-size:10px;padding:2px 8px;">
+              {{ r.status }}
+            </span>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state" style="padding:30px 20px;">
+            <div class="empty-icon" style="font-size:36px;">📭</div>
+            <p>No recent records</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const trendLabels  = {{ trend_labels|safe }};
+  const trendPresent = {{ trend_present|safe }};
+  const trendAbsent  = {{ trend_absent|safe }};
+
+  const deptData = {{ dept_data|tojson }};
+  const deptLabels = deptData.map(d => d.dept);
+  const deptPcts   = deptData.map(d => d.pct);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    createTrendChart('trendChart', trendLabels, trendPresent, trendAbsent);
+    createDeptDonut('deptChart', deptLabels, deptData.map(d => d.total));
+  });
+</script>
+{% endblock %}

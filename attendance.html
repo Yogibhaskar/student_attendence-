@@ -1,0 +1,227 @@
+{% extends 'layout.html' %}
+{% block title %}Mark Attendance{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+
+{% block content %}
+<div id="pageOverlay" class="page-overlay"></div>
+
+<div class="page-header">
+  <div>
+    <h2>Mark Attendance</h2>
+    <p>Select a date and mark students present or absent.</p>
+  </div>
+  <a href="{{ url_for('reports', type='daily', date=selected_date) }}" class="btn-outline">
+    <i class="bi bi-file-text"></i> View Report
+  </a>
+</div>
+
+<!-- DATE & FILTER BAR -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('attendance') }}" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="font-size:12.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Date</label>
+      <input type="date" name="date" class="form-ctrl" style="width:180px;"
+        value="{{ selected_date }}" max="{{ today_iso }}" onchange="this.form.submit()">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label style="font-size:12.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;">Dept</label>
+      <select name="dept" class="form-ctrl" style="width:180px;" onchange="this.form.submit()">
+        <option value="">All Departments</option>
+        {% for d in departments %}
+          <option value="{{ d.department }}" {{ 'selected' if dept_filter == d.department }}>{{ d.department }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+<!-- SUMMARY MINI CARDS -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div style="background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius);padding:14px 18px;text-align:center;">
+      <div style="font-size:24px;font-weight:800;color:var(--text);">{{ total }}</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;">Total</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);border-radius:var(--radius);padding:14px 18px;text-align:center;">
+      <div style="font-size:24px;font-weight:800;color:var(--accent-green);" id="presentCount">{{ present }}</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#059669;font-weight:600;">Present</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:var(--radius);padding:14px 18px;text-align:center;">
+      <div style="font-size:24px;font-weight:800;color:var(--accent-red);" id="absentCount">{{ absent }}</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#DC2626;font-weight:600;">Absent</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div style="background:rgba(148,163,184,0.06);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;text-align:center;">
+      <div style="font-size:24px;font-weight:800;color:var(--text-muted);" id="unmarkedCount">{{ unmarked }}</div>
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;">Unmarked</div>
+    </div>
+  </div>
+</div>
+
+<!-- ATTENDANCE FORM -->
+{% if students %}
+<form method="POST" action="{{ url_for('attendance') }}" id="attendanceForm">
+  <input type="hidden" name="att_date" value="{{ selected_date }}">
+  {% if dept_filter %}<input type="hidden" name="dept" value="{{ dept_filter }}">{% endif %}
+
+  <div class="app-card">
+    <div class="app-card-header">
+      <span class="app-card-title">
+        <i class="bi bi-calendar-check-fill text-brand"></i>
+        Attendance Sheet —
+        <span style="color:var(--brand);">
+          {{ selected_date }}
+        </span>
+      </span>
+      <div class="d-flex gap-2 flex-wrap">
+        <button type="button" id="markAllPresent" class="btn-success-soft" style="font-size:12px;padding:6px 14px;">
+          <i class="bi bi-check-all"></i> All Present
+        </button>
+        <button type="button" id="markAllAbsent" class="btn-danger-soft" style="font-size:12px;padding:6px 14px;">
+          <i class="bi bi-x-lg"></i> All Absent
+        </button>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="app-table">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>Student</th>
+            <th>Roll No</th>
+            <th>Department</th>
+            <th>Year</th>
+            <th>Mark Attendance</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in students %}
+          <tr class="att-row" id="row-{{ s.id }}">
+            <td style="color:var(--text-light);font-size:12px;">{{ loop.index }}</td>
+            <td>
+              <input type="hidden" name="student_ids" value="{{ s.id }}">
+              <div class="d-flex align-items-center gap-2">
+                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--accent-purple));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;">
+                  {{ s.name[0]|upper }}
+                </div>
+                <div>
+                  <div style="font-weight:600;font-size:13px;">{{ s.name }}</div>
+                  <div style="font-size:11px;color:var(--text-muted);" class="mono">{{ s.student_id }}</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-weight:600;">{{ s.roll_no }}</td>
+            <td>
+              {% set dc = 'dept-cs' if 'computer' in s.department|lower else ('dept-elec' if 'electron' in s.department|lower else ('dept-mech' if 'mech' in s.department|lower else ('dept-civil' if 'civil' in s.department|lower else 'dept-other'))) %}
+              <span class="dept-badge {{ dc }}">{{ s.department }}</span>
+            </td>
+            <td><span style="font-size:12px;font-weight:600;color:var(--text-muted);">Yr {{ s.year }}</span></td>
+            <td>
+              <div class="att-toggle">
+                <button type="button" class="att-btn present-btn {{ 'selected' if s.status == 'present' }}">
+                  <i class="bi bi-check-circle me-1"></i>Present
+                </button>
+                <button type="button" class="att-btn absent-btn {{ 'selected' if s.status == 'absent' }}">
+                  <i class="bi bi-x-circle me-1"></i>Absent
+                </button>
+                <input type="checkbox" name="present" value="{{ s.id }}"
+                  {{ 'checked' if s.status == 'present' }}
+                  style="display:none;">
+              </div>
+            </td>
+            <td>
+              <span class="status-display {{ 'badge-present is-present' if s.status == 'present' else ('badge-absent is-absent' if s.status == 'absent' else 'badge-unmarked') }}">
+                {{ s.status if s.status else 'Unmarked' }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SAVE BUTTON -->
+    <div style="padding:20px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div style="font-size:13px;color:var(--text-muted);">
+        <i class="bi bi-info-circle me-1"></i>
+        Changes will overwrite existing attendance for this date.
+      </div>
+      <button type="submit" class="btn-brand" id="saveBtn" style="padding:11px 28px;">
+        <i class="bi bi-floppy2-fill"></i> Save Attendance
+      </button>
+    </div>
+  </div>
+</form>
+
+{% else %}
+<div class="app-card">
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <h5>No students found</h5>
+    <p>{{ 'No students in this department.' if dept_filter else 'Add students first to mark attendance.' }}</p>
+    <a href="{{ url_for('add_student') }}" class="btn-brand mt-3">
+      <i class="bi bi-person-plus-fill"></i> Add Students
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Pass today's date for max attribute
+  const todayIso = new Date().toISOString().split('T')[0];
+  document.querySelectorAll('input[type="date"]').forEach(el => { el.max = todayIso; });
+
+  // Live counter update
+  function updateCounts() {
+    let p = document.querySelectorAll('.present-btn.selected').length;
+    let a = document.querySelectorAll('.absent-btn.selected').length;
+    let u = document.querySelectorAll('.att-row').length - p - a;
+    document.getElementById('presentCount').textContent = p;
+    document.getElementById('absentCount').textContent = a;
+    document.getElementById('unmarkedCount').textContent = u;
+  }
+
+  document.querySelectorAll('.present-btn, .absent-btn').forEach(btn => {
+    btn.addEventListener('click', updateCounts);
+  });
+
+  // Also update status-display text on click
+  document.querySelectorAll('.att-row').forEach(row => {
+    const presentBtn = row.querySelector('.present-btn');
+    const absentBtn  = row.querySelector('.absent-btn');
+    const display    = row.querySelector('.status-display');
+
+    presentBtn?.addEventListener('click', () => {
+      if (display) {
+        display.className = 'status-display badge-present is-present';
+        display.textContent = 'present';
+      }
+    });
+    absentBtn?.addEventListener('click', () => {
+      if (display) {
+        display.className = 'status-display badge-absent is-absent';
+        display.textContent = 'absent';
+      }
+    });
+  });
+
+  document.getElementById('markAllPresent')?.addEventListener('click', updateCounts);
+  document.getElementById('markAllAbsent')?.addEventListener('click', updateCounts);
+
+  document.getElementById('attendanceForm')?.addEventListener('submit', () => {
+    const btn = document.getElementById('saveBtn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving…';
+    btn.disabled = true;
+  });
+</script>
+{% endblock %}

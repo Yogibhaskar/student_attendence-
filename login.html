@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+{% block title %}Login{% endblock %}
+
+{% block body %}
+<div class="login-page">
+  <!-- Floating orbs -->
+  <div style="position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,0.15),transparent 70%);top:10%;left:5%;animation:pulse 10s ease infinite;pointer-events:none;"></div>
+  <div style="position:absolute;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.15),transparent 70%);bottom:15%;right:8%;animation:pulse 7s ease infinite reverse;pointer-events:none;"></div>
+
+  <div class="login-card">
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="logo-icon"><i class="bi bi-mortarboard-fill"></i></div>
+      <div class="logo-text">
+        <h1>AttendX</h1>
+        <p>Management System</p>
+      </div>
+    </div>
+
+    <h2>Welcome Back 👋</h2>
+    <p class="login-sub">Sign in to manage attendance</p>
+
+    <!-- Demo credentials -->
+    <div class="login-demo-grid">
+      <div class="demo-item"><strong>Username</strong>admin</div>
+      <div class="demo-item"><strong>Password</strong>admin123</div>
+      <div class="demo-item" style="grid-column:1/-1;font-size:11px;color:rgba(255,255,255,0.3);padding-top:6px;border-top:1px solid rgba(255,255,255,0.06)">
+        <i class="bi bi-info-circle me-1"></i>Student Portal: use your Student ID (e.g. STU001)
+      </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('login') }}" id="loginForm">
+      <div class="mb-3">
+        <label class="form-label">USERNAME</label>
+        <div class="search-wrap">
+          <i class="bi bi-person search-icon"></i>
+          <input
+            type="text"
+            name="username"
+            class="form-ctrl"
+            placeholder="Enter username"
+            autocomplete="username"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">PASSWORD</label>
+        <div class="search-wrap">
+          <i class="bi bi-lock search-icon"></i>
+          <input
+            type="password"
+            name="password"
+            id="passwordInput"
+            class="form-ctrl"
+            placeholder="Enter password"
+            autocomplete="current-password"
+            required
+            style="padding-right:44px"
+          />
+          <button type="button" id="togglePwd" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;font-size:15px;">
+            <i class="bi bi-eye" id="eyeIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login" id="loginBtn">
+        <span id="loginBtnText"><i class="bi bi-arrow-right-circle me-2"></i>Sign In</span>
+        <span id="loginBtnLoad" style="display:none"><span class="spinner-border spinner-border-sm me-2"></span>Signing in...</span>
+      </button>
+    </form>
+
+    <div class="login-hint">
+      Also check out the
+      <a href="{{ url_for('student_portal') }}" style="color:rgba(255,255,255,0.4);text-decoration:underline;">Student Portal</a>
+      — no login needed
+    </div>
+  </div>
+</div>
+
+<script>
+  // Toggle password visibility
+  document.getElementById('togglePwd').addEventListener('click', function() {
+    const input = document.getElementById('passwordInput');
+    const icon  = document.getElementById('eyeIcon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.className = 'bi bi-eye-slash';
+    } else {
+      input.type = 'password';
+      icon.className = 'bi bi-eye';
+    }
+  });
+
+  // Loading state on submit
+  document.getElementById('loginForm').addEventListener('submit', function() {
+    document.getElementById('loginBtnText').style.display = 'none';
+    document.getElementById('loginBtnLoad').style.display = 'inline-flex';
+    document.getElementById('loginBtn').disabled = true;
+  });
+</script>
+{% endblock %}

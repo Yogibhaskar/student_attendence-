@@ -1,0 +1,211 @@
+{% extends 'layout.html' %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<div id="pageOverlay" class="page-overlay"></div>
+
+<div class="page-header">
+  <div>
+    <h2>Attendance Reports</h2>
+    <p>Analyze attendance data across dates, months, and students.</p>
+  </div>
+  <a href="{{ url_for('reports', type=report_type, date=selected_date, month=selected_month) }}&export=csv"
+     onclick="exportCSV(event)" class="btn-outline">
+    <i class="bi bi-download"></i> Export CSV
+  </a>
+</div>
+
+<!-- REPORT TYPE TABS -->
+<div style="background:var(--surface);border:1px solid var(--border-subtle);border-radius:var(--radius);padding:6px;display:inline-flex;gap:4px;margin-bottom:20px;">
+  {% for rtype, label, icon in [('daily','Daily','calendar3'), ('monthly','Monthly','calendar-month'), ('student','Student-wise','person-lines-fill')] %}
+  <a href="{{ url_for('reports', type=rtype) }}"
+     style="padding:8px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:7px;transition:all 0.2s;
+     {% if report_type == rtype %}background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,0.35);{% else %}color:var(--text-muted);{% endif %}">
+    <i class="bi bi-{{ icon }}"></i>{{ label }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- FILTER FORM -->
+<div class="filter-bar">
+  <form method="GET" action="{{ url_for('reports') }}" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+    <input type="hidden" name="type" value="{{ report_type }}">
+
+    {% if report_type == 'daily' %}
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label class="form-label" style="margin:0;white-space:nowrap;">Date</label>
+      <input type="date" name="date" class="form-ctrl" style="width:180px;" value="{{ selected_date }}">
+    </div>
+    {% elif report_type == 'monthly' %}
+    <div style="display:flex;align-items:center;gap:8px;">
+      <label class="form-label" style="margin:0;white-space:nowrap;">Month</label>
+      <input type="month" name="month" class="form-ctrl" style="width:180px;" value="{{ selected_month }}">
+    </div>
+    {% endif %}
+
+    <button type="submit" class="btn-brand" style="padding:9px 20px;">
+      <i class="bi bi-funnel-fill"></i> Generate
+    </button>
+  </form>
+</div>
+
+<!-- REPORT TITLE + STATS -->
+{% if rows %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+  <h5 style="font-weight:700;margin:0;color:var(--text);">
+    <i class="bi bi-file-earmark-text-fill text-brand me-2"></i>
+    {{ title }}
+  </h5>
+
+  {% if report_type == 'daily' %}
+  {% set present_count = rows|selectattr('status','eq','present')|list|length %}
+  {% set total_count = rows|length %}
+  <div style="display:flex;gap:12px;align-items:center;">
+    <span class="badge-present">{{ present_count }} Present</span>
+    <span class="badge-absent">{{ total_count - present_count }} Absent/Unmarked</span>
+    <span style="font-size:13px;font-weight:700;color:var(--brand);">
+      {{ (present_count / total_count * 100)|round(1) if total_count else 0 }}% Rate
+    </span>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- REPORT TABLE -->
+<div class="app-card">
+  {% if rows %}
+  <div style="overflow-x:auto;">
+    <table class="app-table" id="reportTable">
+      <thead>
+        {% if report_type == 'daily' %}
+        <tr>
+          <th>#</th><th>Student ID</th><th>Name</th><th>Roll No</th><th>Department</th><th>Year</th><th>Status</th>
+        </tr>
+        {% elif report_type == 'monthly' %}
+        <tr>
+          <th>#</th><th>Student ID</th><th>Name</th><th>Roll No</th><th>Department</th>
+          <th>Present Days</th><th>Total Days</th><th>Attendance %</th>
+        </tr>
+        {% else %}
+        <tr>
+          <th>#</th><th>Student ID</th><th>Name</th><th>Department</th><th>Year</th>
+          <th>Present</th><th>Absent</th><th>Total</th><th>Attendance %</th>
+        </tr>
+        {% endif %}
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr class="student-row">
+          <td style="color:var(--text-light);font-size:12px;">{{ loop.index }}</td>
+          <td><span class="mono" style="background:var(--surface-2);padding:2px 8px;border-radius:6px;font-size:12px;">{{ r.student_id }}</span></td>
+          <td style="font-weight:600;">{{ r.name }}</td>
+
+          {% if report_type == 'daily' %}
+          <td>{{ r.roll_no }}</td>
+          <td>
+            {% set dc = 'dept-cs' if 'computer' in r.department|lower else ('dept-elec' if 'electron' in r.department|lower else ('dept-mech' if 'mech' in r.department|lower else ('dept-civil' if 'civil' in r.department|lower else 'dept-other'))) %}
+            <span class="dept-badge {{ dc }}">{{ r.department }}</span>
+          </td>
+          <td><span style="font-size:12px;color:var(--text-muted);">Yr {{ r.year }}</span></td>
+          <td>
+            <span class="{{ 'badge-present' if r.status == 'present' else ('badge-absent' if r.status == 'absent' else 'badge-unmarked') }}">
+              {{ r.status if r.status else 'Unmarked' }}
+            </span>
+          </td>
+
+          {% elif report_type == 'monthly' %}
+          <td>{{ r.roll_no }}</td>
+          <td>
+            {% set dc = 'dept-cs' if 'computer' in r.department|lower else ('dept-elec' if 'electron' in r.department|lower else ('dept-mech' if 'mech' in r.department|lower else ('dept-civil' if 'civil' in r.department|lower else 'dept-other'))) %}
+            <span class="dept-badge {{ dc }}">{{ r.department }}</span>
+          </td>
+          <td style="font-weight:700;color:var(--accent-green);">{{ r.present_days or 0 }}</td>
+          <td style="color:var(--text-muted);">{{ r.total_days or 0 }}</td>
+          <td>
+            {% set pct = r.pct or 0 %}
+            <div class="pct-bar">
+              <div class="pct-track">
+                <div class="pct-fill" data-width="{{ pct }}"
+                  style="width:0%;background:{% if pct >= 75 %}var(--accent-green){% elif pct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+                </div>
+              </div>
+              <span class="pct-label" style="color:{% if pct >= 75 %}var(--accent-green){% elif pct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+                {{ pct }}%
+              </span>
+            </div>
+          </td>
+
+          {% else %}{# student-wise #}
+          <td>
+            {% set dc = 'dept-cs' if 'computer' in r.department|lower else ('dept-elec' if 'electron' in r.department|lower else ('dept-mech' if 'mech' in r.department|lower else ('dept-civil' if 'civil' in r.department|lower else 'dept-other'))) %}
+            <span class="dept-badge {{ dc }}">{{ r.department }}</span>
+          </td>
+          <td><span style="font-size:12px;color:var(--text-muted);">Yr {{ r.year }}</span></td>
+          <td style="font-weight:700;color:var(--accent-green);">{{ r.present_days or 0 }}</td>
+          <td style="font-weight:700;color:var(--accent-red);">{{ r.absent_days or 0 }}</td>
+          <td style="color:var(--text-muted);">{{ r.total_days or 0 }}</td>
+          <td>
+            {% set pct = r.pct or 0 %}
+            <div class="pct-bar">
+              <div class="pct-track">
+                <div class="pct-fill" data-width="{{ pct }}"
+                  style="width:0%;background:{% if pct >= 75 %}var(--accent-green){% elif pct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+                </div>
+              </div>
+              <span class="pct-label" style="color:{% if pct >= 75 %}var(--accent-green){% elif pct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+                {{ pct }}%
+              </span>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Chart for student/monthly -->
+  {% if report_type in ['monthly', 'student'] %}
+  <div style="padding:24px;border-top:1px solid var(--border);">
+    <div style="font-size:13px;font-weight:700;margin-bottom:16px;color:var(--text);">
+      <i class="bi bi-bar-chart-fill text-brand me-2"></i>Attendance % by Student
+    </div>
+    <div class="chart-wrap" style="height:260px;">
+      <canvas id="reportBarChart"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📊</div>
+    <h5>No data found</h5>
+    <p>No attendance records for the selected period. Try a different date or month.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function exportCSV(e) {
+    e.preventDefault();
+    const params = new URLSearchParams({
+      type: '{{ report_type }}',
+      date: '{{ selected_date }}',
+      month: '{{ selected_month }}'
+    });
+    window.location.href = `/reports/export/csv?${params}`;
+  }
+
+  {% if report_type in ['monthly', 'student'] and rows %}
+  const chartLabels = {{ rows | map(attribute='name') | list | tojson }};
+  const chartData   = {{ rows | map(attribute='pct') | list | tojson }};
+  document.addEventListener('DOMContentLoaded', () => {
+    createBarChart('reportBarChart', chartLabels, chartData);
+  });
+  {% endif %}
+</script>
+{% endblock %}

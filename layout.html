@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block body %}
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon"><i class="bi bi-mortarboard-fill"></i></div>
+    <div class="brand-text">
+      <span class="brand-name">AttendX</span>
+      <span class="brand-sub">Management System</span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">MAIN</div>
+    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-grid-fill"></i></span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <a href="{{ url_for('students') }}" class="nav-link {% if request.endpoint in ['students','add_student','edit_student'] %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-people-fill"></i></span>
+      <span class="nav-label">Students</span>
+    </a>
+    <a href="{{ url_for('attendance') }}" class="nav-link {% if request.endpoint=='attendance' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-calendar-check-fill"></i></span>
+      <span class="nav-label">Attendance</span>
+    </a>
+    <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint=='reports' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-bar-chart-fill"></i></span>
+      <span class="nav-label">Reports</span>
+    </a>
+    <div class="nav-section-label mt-3">PORTAL</div>
+    <a href="{{ url_for('student_portal') }}" class="nav-link {% if request.endpoint=='student_portal' %}active{% endif %}">
+      <span class="nav-icon"><i class="bi bi-person-badge-fill"></i></span>
+      <span class="nav-label">Student Portal</span>
+    </a>
+    <div class="nav-section-label mt-3">ACCOUNT</div>
+    <a href="{{ url_for('logout') }}" class="nav-link text-danger-nav">
+      <span class="nav-icon"><i class="bi bi-box-arrow-right"></i></span>
+      <span class="nav-label">Logout</span>
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar">{{ (session.name or "A")[0]|upper }}</div>
+      <div class="user-info">
+        <span class="user-name">{{ session.name or session.username }}</span>
+        <span class="user-role">{{ (session.role or "admin")|capitalize }}</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div class="main-wrapper" id="mainWrapper">
+  <header class="topbar">
+    <button class="sidebar-toggle" id="sidebarToggle"><i class="bi bi-list"></i></button>
+    <div class="topbar-title">{% block page_title %}Dashboard{% endblock %}</div>
+    <div class="topbar-actions">
+      <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+        <i class="bi bi-moon-fill" id="themeIcon"></i>
+      </button>
+      <div class="topbar-date">
+        <i class="bi bi-calendar3"></i>
+        <span id="currentDate"></span>
+      </div>
+      <div class="user-avatar-sm">{{ (session.name or "A")[0]|upper }}</div>
+    </div>
+  </header>
+
+  <div class="alert-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category=='danger' else ('warning' if category=='warning' else ('info' if category=='info' else 'success')) }} alert-dismissible fade show custom-alert" role="alert">
+          <i class="bi bi-{% if category=='success' %}check-circle-fill{% elif category=='danger' %}x-circle-fill{% elif category=='warning' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} me-2"></i>
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      {% endfor %}
+    {% endwith %}
+  </div>
+
+  <main class="page-content">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+<div id="pageOverlay" class="page-overlay"></div>
+{% endblock %}

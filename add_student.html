@@ -1,0 +1,155 @@
+{% extends 'layout.html' %}
+{% block title %}{{ 'Edit' if edit else 'Add' }} Student{% endblock %}
+{% block page_title %}{{ 'Edit' if edit else 'Add' }} Student{% endblock %}
+
+{% block content %}
+<div id="pageOverlay" class="page-overlay"></div>
+
+<div class="page-header">
+  <div>
+    <h2>{{ 'Edit Student' if edit else 'Add New Student' }}</h2>
+    <p>{{ 'Update student information below.' if edit else 'Fill in the details to register a new student.' }}</p>
+  </div>
+  <a href="{{ url_for('students') }}" class="btn-outline">
+    <i class="bi bi-arrow-left"></i> Back to Students
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="app-card">
+      <div class="app-card-header">
+        <span class="app-card-title">
+          <i class="bi bi-person-{{ 'pencil' if edit else 'plus' }}-fill text-brand"></i>
+          Student Information
+        </span>
+        {% if edit %}
+        <span style="font-size:12px;background:var(--surface-2);border:1px solid var(--border);padding:4px 12px;border-radius:99px;font-weight:600;color:var(--text-muted);">
+          Editing: {{ data.student_id }}
+        </span>
+        {% endif %}
+      </div>
+      <div class="app-card-body">
+        <form method="POST" novalidate id="studentForm">
+          <div class="row g-3">
+            <!-- Student ID -->
+            <div class="col-md-6">
+              <label class="form-label">Student ID <span style="color:var(--accent-red)">*</span></label>
+              <input type="text" name="student_id" class="form-ctrl"
+                placeholder="e.g. STU011"
+                value="{{ data.student_id or '' }}"
+                required
+                style="text-transform:uppercase;"
+              >
+              <div style="font-size:11px;color:var(--text-light);margin-top:4px;">Unique identifier — cannot be changed later easily.</div>
+            </div>
+
+            <!-- Roll Number -->
+            <div class="col-md-6">
+              <label class="form-label">Roll Number <span style="color:var(--accent-red)">*</span></label>
+              <input type="text" name="roll_no" class="form-ctrl"
+                placeholder="e.g. R011"
+                value="{{ data.roll_no or '' }}"
+                required
+              >
+            </div>
+
+            <!-- Full Name -->
+            <div class="col-12">
+              <label class="form-label">Full Name <span style="color:var(--accent-red)">*</span></label>
+              <input type="text" name="name" class="form-ctrl"
+                placeholder="Enter full name"
+                value="{{ data.name or '' }}"
+                required
+              >
+            </div>
+
+            <!-- Department -->
+            <div class="col-md-8">
+              <label class="form-label">Department <span style="color:var(--accent-red)">*</span></label>
+              <select name="department" class="form-ctrl" required>
+                <option value="">— Select Department —</option>
+                {% for dept in ['Computer Science', 'Electronics', 'Mechanical', 'Civil', 'Information Technology', 'Electrical', 'Chemical'] %}
+                <option value="{{ dept }}" {{ 'selected' if data.department == dept }}>{{ dept }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Year -->
+            <div class="col-md-4">
+              <label class="form-label">Year <span style="color:var(--accent-red)">*</span></label>
+              <select name="year" class="form-ctrl" required>
+                <option value="">Year</option>
+                {% for y in [1,2,3,4] %}
+                <option value="{{ y }}" {{ 'selected' if data.year|string == y|string }}>Year {{ y }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Email -->
+            <div class="col-md-6">
+              <label class="form-label">Email Address</label>
+              <input type="email" name="email" class="form-ctrl"
+                placeholder="student@school.edu"
+                value="{{ data.email or '' }}"
+              >
+            </div>
+
+            <!-- Phone -->
+            <div class="col-md-6">
+              <label class="form-label">Phone Number</label>
+              <input type="tel" name="phone" class="form-ctrl"
+                placeholder="10-digit mobile number"
+                value="{{ data.phone or '' }}"
+              >
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex gap-3 mt-4 pt-2" style="border-top:1px solid var(--border);">
+            <button type="submit" class="btn-brand" id="submitBtn">
+              <i class="bi bi-{{ 'check-circle' if edit else 'person-plus' }}"></i>
+              {{ 'Update Student' if edit else 'Add Student' }}
+            </button>
+            <a href="{{ url_for('students') }}" class="btn-outline">
+              <i class="bi bi-x-circle"></i> Cancel
+            </a>
+            {% if edit %}
+            <form method="POST" action="{{ url_for('delete_student', sid=data.id) }}" style="margin-left:auto;">
+              <button type="submit" class="btn-danger-soft confirm-delete" style="padding:9px 16px;font-size:13px;">
+                <i class="bi bi-trash-fill"></i> Delete
+              </button>
+            </form>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- TIPS CARD -->
+    <div class="app-card mt-3" style="background:linear-gradient(135deg,rgba(79,70,229,0.06),rgba(139,92,246,0.06));border-color:rgba(79,70,229,0.15);">
+      <div class="app-card-body" style="padding:18px 24px;">
+        <div class="d-flex gap-3 align-items-start">
+          <span style="font-size:22px;">💡</span>
+          <div>
+            <div style="font-weight:700;margin-bottom:4px;">Tips</div>
+            <ul style="color:var(--text-muted);font-size:13px;margin:0;padding-left:18px;line-height:2;">
+              <li>Student ID format: STU001, STU002 (must be unique)</li>
+              <li>Roll number is used to sort students in attendance sheets</li>
+              <li>Email is optional but recommended for notifications</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('studentForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+    btn.disabled = true;
+  });
+</script>
+{% endblock %}

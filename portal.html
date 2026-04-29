@@ -1,0 +1,206 @@
+{% extends 'layout.html' %}
+{% block title %}Student Portal{% endblock %}
+{% block page_title %}Student Portal{% endblock %}
+
+{% block content %}
+<div id="pageOverlay" class="page-overlay"></div>
+
+{% if not session.get('user_id') %}
+<!-- ── PUBLIC PORTAL (no auth) ── -->
+<div class="portal-page" style="margin:-24px;padding:40px 20px;">
+  <div style="max-width:960px;margin:0 auto;">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:40px;">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,#4F46E5,#8B5CF6);border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px;box-shadow:0 8px 24px rgba(79,70,229,0.4);">
+        <i class="bi bi-person-badge-fill" style="color:#fff;"></i>
+      </div>
+      <h1 style="font-size:28px;font-weight:800;color:#fff;margin-bottom:6px;">Student Portal</h1>
+      <p style="color:rgba(255,255,255,0.4);font-size:14px;">Enter your Student ID to view your attendance</p>
+    </div>
+
+    <!-- Search Card -->
+    <div class="portal-card" style="max-width:480px;margin:0 auto 30px;">
+      <h5 style="font-weight:700;margin-bottom:20px;font-size:16px;text-align:center;">
+        <i class="bi bi-search me-2" style="color:var(--brand);"></i>Look Up Attendance
+      </h5>
+      <form method="POST" action="{{ url_for('student_portal') }}">
+        <label class="form-label">STUDENT ID</label>
+        <div style="display:flex;gap:10px;">
+          <input type="text" name="student_id" class="form-ctrl" placeholder="e.g. STU001"
+            style="text-transform:uppercase;flex:1;" required>
+          <button type="submit" class="btn-brand" style="white-space:nowrap;">
+            <i class="bi bi-arrow-right-circle"></i> View
+          </button>
+        </div>
+        <div style="margin-top:12px;font-size:12px;color:var(--text-muted);text-align:center;">
+          Try: STU001, STU002, … STU010
+        </div>
+      </form>
+    </div>
+
+    {% if student %}
+    <!-- Student Result -->
+    <div class="portal-card">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:24px;flex-wrap:wrap;">
+        <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--accent-purple));color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0;">
+          {{ student.name[0]|upper }}
+        </div>
+        <div style="flex:1;">
+          <h4 style="margin:0;font-weight:800;font-size:20px;">{{ student.name }}</h4>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:4px;">
+            <span style="font-size:12px;color:var(--text-muted);"><i class="bi bi-hash me-1"></i>{{ student.student_id }}</span>
+            <span style="font-size:12px;color:var(--text-muted);"><i class="bi bi-mortarboard me-1"></i>{{ student.department }}</span>
+            <span style="font-size:12px;color:var(--text-muted);"><i class="bi bi-calendar me-1"></i>Year {{ student.year }}</span>
+          </div>
+        </div>
+        <!-- Big percentage -->
+        <div style="text-align:center;">
+          <div style="font-size:40px;font-weight:800;line-height:1;color:{% if pct >= 75 %}var(--accent-green){% elif pct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+            {{ pct }}%
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);font-weight:600;">Overall</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="row g-3 mb-4">
+        <div class="col-4">
+          <div style="text-align:center;padding:16px;background:rgba(16,185,129,0.06);border-radius:var(--radius);border:1px solid rgba(16,185,129,0.15);">
+            <div style="font-size:28px;font-weight:800;color:var(--accent-green);">{{ present }}</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#059669;font-weight:600;">Present</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div style="text-align:center;padding:16px;background:rgba(239,68,68,0.06);border-radius:var(--radius);border:1px solid rgba(239,68,68,0.15);">
+            <div style="font-size:28px;font-weight:800;color:var(--accent-red);">{{ absent }}</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#DC2626;font-weight:600;">Absent</div>
+          </div>
+        </div>
+        <div class="col-4">
+          <div style="text-align:center;padding:16px;background:var(--surface-2);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:28px;font-weight:800;color:var(--text);">{{ total }}</div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;">Total</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alert if low -->
+      {% if pct < 75 %}
+      <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+        <i class="bi bi-exclamation-triangle-fill" style="color:#DC2626;font-size:18px;"></i>
+        <div>
+          <strong style="color:#DC2626;">Low Attendance Warning</strong>
+          <p style="margin:0;font-size:12.5px;color:var(--text-muted);">Your attendance is below 75%. Please contact your department advisor.</p>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Monthly breakdown -->
+      {% if monthly %}
+      <div style="margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;">Monthly Breakdown</div>
+        <div class="row g-2">
+          {% for m in monthly %}
+          {% set mpct = (m.p / m.t * 100)|round(1) if m.t else 0 %}
+          <div class="col-6 col-md-4">
+            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;">
+              <div style="font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:4px;">{{ m.month }}</div>
+              <div style="font-size:18px;font-weight:800;color:{% if mpct >= 75 %}var(--accent-green){% elif mpct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+                {{ mpct }}%
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);">{{ m.p }}/{{ m.t }} days</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Recent records -->
+      <div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;">Recent Attendance (Last 30)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          {% for r in records[:30] %}
+          <div title="{{ r.date }} — {{ r.status }}"
+            style="padding:4px 10px;border-radius:99px;font-size:11px;font-weight:600;cursor:default;
+            background:{% if r.status=='present' %}rgba(16,185,129,0.12){% else %}rgba(239,68,68,0.12){% endif %};
+            color:{% if r.status=='present' %}#059669{% else %}#DC2626{% endif %};">
+            {{ r.date[5:] }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Back to admin -->
+    <div style="text-align:center;margin-top:24px;">
+      <a href="{{ url_for('login') }}" style="color:rgba(255,255,255,0.3);font-size:12px;text-decoration:none;">
+        <i class="bi bi-arrow-left me-1"></i>Admin Login
+      </a>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<!-- ── IN-APP PORTAL (logged in as admin) ── -->
+<div class="page-header">
+  <div>
+    <h2>Student Portal</h2>
+    <p>Students can check their own attendance using their Student ID.</p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="app-card">
+      <div class="app-card-header">
+        <span class="app-card-title"><i class="bi bi-person-badge-fill text-brand"></i> Look Up Student</span>
+      </div>
+      <div class="app-card-body">
+        <form method="POST" action="{{ url_for('student_portal') }}">
+          <label class="form-label">STUDENT ID</label>
+          <div style="display:flex;gap:10px;">
+            <input type="text" name="student_id" class="form-ctrl" placeholder="e.g. STU001"
+              style="text-transform:uppercase;flex:1;" required>
+            <button type="submit" class="btn-brand"><i class="bi bi-search"></i> Search</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if student %}
+    <div class="app-card mt-3">
+      <div class="app-card-header">
+        <span class="app-card-title">
+          <i class="bi bi-person-circle text-brand"></i>
+          {{ student.name }} — {{ student.student_id }}
+        </span>
+        <span style="font-size:26px;font-weight:800;color:{% if pct >= 75 %}var(--accent-green){% elif pct >= 50 %}var(--accent-amber){% else %}var(--accent-red){% endif %};">
+          {{ pct }}%
+        </span>
+      </div>
+      <div class="app-card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-4"><div style="text-align:center;padding:14px;background:rgba(16,185,129,0.08);border-radius:var(--radius);"><div style="font-size:24px;font-weight:800;color:var(--accent-green);">{{ present }}</div><div style="font-size:11px;text-transform:uppercase;color:#059669;font-weight:600;">Present</div></div></div>
+          <div class="col-4"><div style="text-align:center;padding:14px;background:rgba(239,68,68,0.08);border-radius:var(--radius);"><div style="font-size:24px;font-weight:800;color:var(--accent-red);">{{ absent }}</div><div style="font-size:11px;text-transform:uppercase;color:#DC2626;font-weight:600;">Absent</div></div></div>
+          <div class="col-4"><div style="text-align:center;padding:14px;background:var(--surface-2);border-radius:var(--radius);"><div style="font-size:24px;font-weight:800;">{{ total }}</div><div style="font-size:11px;text-transform:uppercase;color:var(--text-muted);font-weight:600;">Total</div></div></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          {% for r in records[:20] %}
+          <span style="padding:3px 9px;border-radius:99px;font-size:11px;font-weight:600;
+            background:{% if r.status=='present' %}rgba(16,185,129,0.12){% else %}rgba(239,68,68,0.12){% endif %};
+            color:{% if r.status=='present' %}#059669{% else %}#DC2626{% endif %};">
+            {{ r.date[5:] }}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
